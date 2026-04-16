@@ -3,7 +3,8 @@ import { join } from 'path';
 import { OllamaClient } from '../../ai/ollama.client.js';
 import { PageDetector } from './page.detector.js';
 import { logger } from '../../utils/logger.js';
-import type { SiteMap, FileManifest, Page, Post, Menu, Asset } from '../../types/index.js';
+import type { SiteMap, Page, Post, Menu, Asset } from '../../types/index.js';
+import type { FileManifest } from '../ingest/zip.handler.js';
 
 export class AnalyzeService {
   private pageDetector: PageDetector;
@@ -20,7 +21,7 @@ export class AnalyzeService {
     const menus: Menu[] = [];
     const assets: Asset[] = [];
 
-    const htmlFiles = manifest.files.filter(f => f.type === 'html');
+    const htmlFiles = manifest.files.filter((f: { path: string; type: string; size: number }) => f.type === 'html');
 
     for (const file of htmlFiles) {
       const content = await readFile(join(manifest.extractDir, file.path), 'utf-8');
