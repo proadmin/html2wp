@@ -1,0 +1,271 @@
+:root {
+  --primary: #0073aa;
+  --primary-hover: #005177;
+  --bg: #f5f5f5;
+  --card-bg: #ffffff;
+  --text: #3c434a;
+  --text-light: #646970;
+  --border: #dcdcde;
+  --success: #00a32a;
+  --error: #d63638;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: var(--primary);
+  color: white;
+  padding: 24px;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.app-header p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.app-main {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.conversion-form {
+  background: var(--card-bg);
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-section,
+.configure-section {
+  margin-bottom: 24px;
+}
+
+.upload-section h2,
+.configure-section h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.input-type-selector {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.input-type-selector label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.source-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-input input {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.option-group {
+  margin-bottom: 20px;
+}
+
+.option-group h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+.option-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.conversion-progress {
+  background: var(--card-bg);
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.progress-bar {
+  background: var(--border);
+  height: 8px;
+  border-radius: 4px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: var(--primary);
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.progress-message {
+  font-size: 18px;
+  margin: 16px 0 8px;
+}
+
+.progress-step {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.loading {
+  color: var(--text-light);
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.error {
+  color: var(--error);
+  margin-top: 16px;
+}
+
+.error-state {
+  text-align: left;
+}
+
+.error-state h2 {
+  color: var(--error);
+  margin: 0 0 16px;
+}
+
+.results-summary {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 24px 0;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.stat-label {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.download-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.download-section h3 {
+  margin: 0 0 16px;
+}
+
+.help-text {
+  margin-top: 12px;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.help-text code {
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-light);
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.preview-card {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.preview-card h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.preview-card ul {
+  margin: 0;
+  padding: 0 0 0 20px;
+  font-size: 14px;
+}
+
+.preview-card li {
+  margin-bottom: 4px;
+}

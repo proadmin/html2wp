@@ -4,6 +4,7 @@ import { IngestService } from './ingest/index.js';
 import { AnalyzeService } from './analyze/analyze.service.js';
 import { TransformService } from './transform/transform.service.js';
 import { WxrGenerator } from './export/wxr.generator.js';
+import { ThemeService } from './theme/theme.service.js';
 import { OllamaClient } from '../ai/ollama.client.js';
 import { logger } from '../utils/logger.js';
 import type { JobState, JobInput, JobOptions } from '../types/index.js';
@@ -13,6 +14,7 @@ export class PipelineOrchestrator extends EventEmitter {
   private analyzeService: AnalyzeService;
   private transformService: TransformService;
   private wxrGenerator: WxrGenerator;
+  private themeService: ThemeService;
   private ollama: OllamaClient;
 
   constructor() {
@@ -22,6 +24,7 @@ export class PipelineOrchestrator extends EventEmitter {
     this.analyzeService = new AnalyzeService(this.ollama);
     this.transformService = new TransformService(this.ollama);
     this.wxrGenerator = new WxrGenerator();
+    this.themeService = new ThemeService();
   }
 
   async run(jobId: string, input: JobInput, options: JobOptions): Promise<JobState> {
@@ -61,15 +64,27 @@ export class PipelineOrchestrator extends EventEmitter {
 
       const transformedSiteMap = await this.transformService.transform(siteMap);
 
-      // Step 4: Export
+      // Step 4: Build Theme
+      state.status = 'building';
+      state.progress = { currentStep: 'building', percent: 70, message: 'Generating WordPress theme' };
+      this.emit('update', state);
+
+      await this.themeService.generate(outputDir, transformedSiteMap, {
+        styleMode: options.styleMode,
+        siteName: 'HTML2WP Site'
+      });
+
+      // Step 5: Export
       state.status = 'exporting';
-      state.progress = { currentStep: 'exporting', percent: 80, message: 'Generating export files' };
+      state.progress = { currentStep: 'exporting', percent: 90, message: 'Generating export files' };
       this.emit('update', state);
 
       if (options.outputFormat.includes('wxr')) {
+        const { writeFile, mkdir } = await import('fs/promises');
         const wxrContent = this.wxrGenerator.generate(transformedSiteMap);
-        // Save WXR file
-        state.results.outputUrls = ['/output/' + jobId + '/export.xml'];
+        await mkdir(join(outputDir, 'export'), { recursive: true });
+        await writeFile(join(outputDir, 'export', 'wordpress.xml'), wxrContent);
+        state.results.outputUrls = ['/output/' + jobId + '/export/wordpress.xml'];
       }
 
       state.status = 'complete';
