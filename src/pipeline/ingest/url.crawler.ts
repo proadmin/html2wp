@@ -1,0 +1,162 @@
+import { chromium, Browser, Page } from 'playwright';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join, parse } from 'path';
+import { logger } from '../../utils/logger.js';
+import type { FileManifest } from './zip.handler.js';
+
+export interface CrawlerOptions {
+  maxPages: number;
+  maxDepth: number;
+  waitTime: number;
+}
+
+export class UrlCrawler {
+  private browser: Browser | null = null;
+  private visitedUrls = new Set<string>();
+  private pendingUrls: Array<{ url: string; depth: number }> = [];
+  private downloadedFiles: FileManifest['files'] = [];
+
+  constructor(private options: CrawlerOptions) {}
+
+  async crawl(baseUrl: string, outputDir: string): Promise<FileManifest> {
+    logger.info(`Starting crawl: ${baseUrl}`);
+
+    mkdirSync(outputDir, { recursive: true });
+    this.pendingUrls.push({ url: baseUrl, depth: 0 });
+
+    try {
+      this.browser = await chromium.launch({ headless: true });
+
+      while (this.pendingUrls.length > 0 && this.visitedUrls.size < this.options.maxPages) {
+        const { url, depth } = this.pendingUrls.shift()!;
+        await this.processUrl(url, depth, outputDir, baseUrl);
+      }
+
+      logger.info(`Crawl complete: ${this.downloadedFiles.length} files`);
+
+      return {
+        files: this.downloadedFiles,
+        extractDir: outputDir
+      };
+    } finally {
+      await this.browser?.close();
+    }
+  }
+
+  private async processUrl(url: string, depth: number, outputDir: string, baseUrl: string): Promise<void> {
+    if (this.visitedUrls.has(url) || depth > this.options.maxDepth) {
+      return;
+    }
+
+    this.visitedUrls.add(url);
+    logger.debug(`Crawling: ${url} (depth: ${depth})`);
+
+    const page = await this.browser!.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(this.options.waitTime);
+
+      // Save HTML
+      const html = await page.content();
+      const urlPath = new URL(url).pathname;
+      const filename = urlPath === '/' ? 'index.html' : urlPath.replace(/\/$/, '') + '.html';
+      const filePath = join(outputDir, filename);
+
+      mkdirSync(join(outputDir, parse(filename).dir), { recursive: true });
+      writeFileSync(filePath, html);
+
+      this.downloadedFiles.push({
+        path: filename,
+        type: 'html',
+        size: html.length
+      });
+
+      // Extract and download assets
+      const assets = await page.evaluate(() => {
+        return {
+          images: Array.from(document.querySelectorAll('img[src]')).map(el => el.getAttribute('src')) as string[],
+          stylesheets: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(el => el.getAttribute('href')) as string[],
+          scripts: Array.from(document.querySelectorAll('script[src]')).map(el => el.getAttribute('src')) as string[]
+        };
+      });
+
+      await this.downloadAssets(assets, outputDir, url, baseUrl);
+
+      // Extract links for further crawling
+      const links = await page.evaluate((baseUrl) => {
+        return Array.from(document.querySelectorAll('a[href]'))
+          .map(el => el.getAttribute('href'))
+          .filter((href): href is string => {
+            if (!href) return false;
+            const absolute = new URL(href, baseUrl).href;
+            return absolute.startsWith(baseUrl);
+          })
+          .map(href => new URL(href, baseUrl).href);
+      }, baseUrl);
+
+      for (const link of links) {
+        if (!this.visitedUrls.has(link)) {
+          this.pendingUrls.push({ url: link, depth: depth + 1 });
+        }
+      }
+    } finally {
+      await page.close();
+    }
+  }
+
+  private async downloadAssets(
+    assets: { images: (string | null)[]; stylesheets: (string | null)[]; scripts: (string | null)[] },
+    outputDir: string,
+    pageUrl: string,
+    baseUrl: string
+  ): Promise<void> {
+    const page = await this.browser!.newPage();
+
+    try {
+      const allUrls = [
+        ...assets.images.filter((s): s is string => !!s),
+        ...assets.stylesheets.filter((s): s is string => !!s),
+        ...assets.scripts.filter((s): s is string => !!s)
+      ];
+
+      for (const assetUrl of allUrls) {
+        const absoluteUrl = new URL(assetUrl, pageUrl).href;
+
+        if (!absoluteUrl.startsWith(baseUrl) && !absoluteUrl.startsWith('http')) {
+          continue; // Skip external resources
+        }
+
+        try {
+          const response = await page.request.get(absoluteUrl);
+          const body = await response.body();
+          const urlPath = new URL(absoluteUrl).pathname;
+          const filename = urlPath.split('/').pop() || 'asset';
+          const filePath = join(outputDir, 'assets', filename);
+
+          mkdirSync(join(outputDir, 'assets'), { recursive: true });
+          writeFileSync(filePath, body);
+
+          this.downloadedFiles.push({
+            path: join('assets', filename),
+            type: this.getAssetType(filename),
+            size: body.length
+          });
+        } catch (error) {
+          logger.warn(`Failed to download asset: ${absoluteUrl}`);
+        }
+      }
+    } finally {
+      await page.close();
+    }
+  }
+
+  private getAssetType(filename: string): FileManifest['files'][number]['type'] {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (['css', 'scss', 'sass', 'less'].includes(ext || '')) return 'css';
+    if (['js', 'mjs', 'cjs'].includes(ext || '')) return 'js';
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico'].includes(ext || '')) return 'image';
+    if (['woff', 'woff2', 'ttf', 'eot', 'otf'].includes(ext || '')) return 'font';
+    return 'other';
+  }
+}
