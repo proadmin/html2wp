@@ -20,6 +20,12 @@ export interface JobOptions {
   outputFormat: OutputFormat[];
   styleMode: StyleMode;
   previewEnabled: boolean;
+  wordpressConfig?: {
+    siteUrl: string;
+    appPassword?: string;
+    sshConnection?: string;
+    installMethod?: 'rest-api' | 'wp-cli';
+  };
 }
 
 export interface JobProgress {

@@ -5,6 +5,7 @@ import { AnalyzeService } from './analyze/analyze.service.js';
 import { TransformService } from './transform/transform.service.js';
 import { WxrGenerator } from './export/wxr.generator.js';
 import { ThemeService } from './theme/theme.service.js';
+import { WpInstaller } from './export/wp-installer.js';
 import { OllamaClient } from '../ai/ollama.client.js';
 import { logger } from '../utils/logger.js';
 import type { JobState, JobInput, JobOptions } from '../types/index.js';
@@ -79,12 +80,28 @@ export class PipelineOrchestrator extends EventEmitter {
       state.progress = { currentStep: 'exporting', percent: 90, message: 'Generating export files' };
       this.emit('update', state);
 
+      const { writeFile, mkdir } = await import('fs/promises');
+      await mkdir(join(outputDir, 'export'), { recursive: true });
+
       if (options.outputFormat.includes('wxr')) {
-        const { writeFile, mkdir } = await import('fs/promises');
         const wxrContent = this.wxrGenerator.generate(transformedSiteMap);
-        await mkdir(join(outputDir, 'export'), { recursive: true });
         await writeFile(join(outputDir, 'export', 'wordpress.xml'), wxrContent);
         state.results.outputUrls = ['/output/' + jobId + '/export/wordpress.xml'];
+      }
+
+      // Step 6: Direct Install (optional)
+      if (options.outputFormat.includes('direct') && options.wordpressConfig) {
+        state.progress = { currentStep: 'installing', percent: 95, message: 'Installing to WordPress' };
+        this.emit('update', state);
+
+        const installer = new WpInstaller({
+          siteUrl: options.wordpressConfig.siteUrl,
+          appPassword: options.wordpressConfig.appPassword,
+          sshConnection: options.wordpressConfig.sshConnection,
+          method: options.wordpressConfig.installMethod || 'rest-api'
+        });
+
+        await installer.install(transformedSiteMap, outputDir);
       }
 
       state.status = 'complete';
