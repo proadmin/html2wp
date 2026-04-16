@@ -9,10 +9,10 @@ export class WxrGenerator {
         '@encoding': 'UTF-8'
       },
       rss: {
-        '@version': '2.0',
-        '@xmlns:wp': 'http://wordpress.org/export/1.2/',
-        '@xmlns:dc': 'http://purl.org/dc/elements/1.1/',
-        '@xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+        '@_version': '2.0',
+        '@_xmlns:wp': 'http://wordpress.org/export/1.2/',
+        '@_xmlns:dc': 'http://purl.org/dc/elements/1.1/',
+        '@_xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
         channel: {
           title: 'HTML2WP Export',
           link: 'https://example.com',
@@ -27,7 +27,12 @@ export class WxrGenerator {
       }
     };
 
-    const builder = new XMLBuilder({ ignoreAttributes: false, format: true, indentBy: '  ' });
+    const builder = new XMLBuilder({
+      ignoreAttributes: false,
+      format: true,
+      indentBy: '  ',
+      attributesGroupName: '@_'
+    });
     return builder.build(wxr);
   }
 
