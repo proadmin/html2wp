@@ -1,0 +1,38 @@
+{
+  "name": "html2wp",
+  "version": "0.1.0",
+  "description": "Convert HTML websites to WordPress format",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/api/server.ts",
+    "build": "tsc && npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "archiver": "^7.0.0",
+    "bull": "^4.12.0",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fast-xml-parser": "^4.3.5",
+    "multer": "^1.4.5-lts.1",
+    "playwright": "^1.42.0",
+    "unzip-stream": "^0.3.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.2",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.11.0",
+    "@types/unzip-stream": "^0.3.4",
+    "@types/uuid": "^9.0.7",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.1"
+  }
+}
