@@ -10,6 +10,7 @@ export interface WordPressConfig {
   username?: string;
   password?: string;
   appPassword?: string;
+  sshConnection?: string;
 }
 
 export class WordPressClient {
@@ -99,7 +100,7 @@ export class WordPressClient {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${media.filename}"`
       },
-      body: media.content
+      body: Buffer.from(media.content)
     });
 
     if (!response.ok) {

@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join, parse } from 'path';
 import { logger } from '../../utils/logger.js';
@@ -12,6 +12,7 @@ export interface CrawlerOptions {
 
 export class UrlCrawler {
   private browser: Browser | null = null;
+  private context: BrowserContext | null = null;
   private visitedUrls = new Set<string>();
   private pendingUrls: Array<{ url: string; depth: number }> = [];
   private downloadedFiles: FileManifest['files'] = [];
@@ -26,6 +27,10 @@ export class UrlCrawler {
 
     try {
       this.browser = await chromium.launch({ headless: true });
+      // Browser context with downloads enabled
+      this.context = await this.browser.newContext({
+        acceptDownloads: true
+      });
 
       while (this.pendingUrls.length > 0 && this.visitedUrls.size < this.options.maxPages) {
         const { url, depth } = this.pendingUrls.shift()!;
@@ -39,6 +44,7 @@ export class UrlCrawler {
         extractDir: outputDir
       };
     } finally {
+      await this.context?.close();
       await this.browser?.close();
     }
   }
@@ -51,10 +57,21 @@ export class UrlCrawler {
     this.visitedUrls.add(url);
     logger.debug(`Crawling: ${url} (depth: ${depth})`);
 
-    const page = await this.browser!.newPage();
+    const page = await this.context!.newPage();
 
     try {
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      // Handle PDF and other download files
+      const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      const contentType = response?.headers()['content-type'] || '';
+
+      // Skip PDF files - they're not HTML pages
+      if (contentType.includes('application/pdf') || url.endsWith('.pdf')) {
+        logger.debug(`Skipping PDF: ${url}`);
+        await page.close();
+        return;
+      }
+
+      await page.waitForLoadState('networkidle');
       await page.waitForTimeout(this.options.waitTime);
 
       // Save HTML
@@ -111,7 +128,7 @@ export class UrlCrawler {
     pageUrl: string,
     baseUrl: string
   ): Promise<void> {
-    const page = await this.browser!.newPage();
+    const page = await this.context!.newPage();
 
     try {
       const allUrls = [
