@@ -1,14 +1,23 @@
+import { downloadWxr } from '../api/client';
+
 interface ResultProps {
+  jobId: string;
   status: {
     status: string;
     results: { pageCount?: number; postCount?: number; assetCount?: number; outputUrls?: string[] };
   };
+  previewEnabled: boolean;
+  onViewPreview: () => void;
 }
 
-export function Result({ status }: ResultProps) {
-  const downloadWxr = () => {
-    // TODO: Implement actual download
-    alert('Download WXR file');
+export function Result({ jobId, status, previewEnabled, onViewPreview }: ResultProps) {
+  const handleDownload = async () => {
+    try {
+      await downloadWxr(jobId, `wordpress-export-${jobId}.xml`);
+    } catch (error) {
+      console.error('Download failed', error);
+      alert('Failed to download WXR file. Check console for details.');
+    }
   };
 
   return (
@@ -32,9 +41,14 @@ export function Result({ status }: ResultProps) {
 
       <div className="download-section">
         <h3>Download</h3>
-        <button onClick={downloadWxr} className="btn-primary">
+        <button onClick={handleDownload} className="btn-primary">
           Download WXR File
         </button>
+        {previewEnabled && (
+          <button onClick={onViewPreview} className="btn-secondary" style={{ marginLeft: '10px' }}>
+            View Preview
+          </button>
+        )}
         <p className="help-text">
           Import this file in WordPress: <code>Tools → Import → WordPress</code>
         </p>

@@ -17,6 +17,24 @@ export class OllamaClient {
     this.temperature = config.temperature;
   }
 
+  async healthCheck(): Promise<{ ok: boolean; modelAvailable: boolean; message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/tags`, { method: 'GET' });
+      if (!response.ok) {
+        return { ok: false, modelAvailable: false, message: 'Ollama server unreachable' };
+      }
+      const data = await response.json() as { models?: Array<{ name: string }> };
+      const models = data.models || [];
+      const modelAvailable = models.some(m => m.name === this.model || m.name.startsWith(`${this.model}:`));
+      if (!modelAvailable) {
+        return { ok: false, modelAvailable: false, message: `Model "${this.model}" not found. Run: ollama pull ${this.model}` };
+      }
+      return { ok: true, modelAvailable: true, message: 'Ollama is ready' };
+    } catch {
+      return { ok: false, modelAvailable: false, message: 'Ollama server unreachable. Run: ollama serve' };
+    }
+  }
+
   async generate(prompt: string): Promise<string> {
     logger.debug('Generating with Ollama', { model: this.model, prompt: prompt.slice(0, 100) });
 

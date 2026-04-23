@@ -1,8 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { logger } from '../utils/logger.js';
-
-const execAsync = promisify(exec);
 
 export interface WordPressConfig {
   siteUrl: string;
@@ -16,19 +13,44 @@ export interface WordPressConfig {
 export class WordPressClient {
   constructor(private config: WordPressConfig) {}
 
+  private validateSshConnection(conn: string): void {
+    if (!/^[a-zA-Z0-9._@-]+$/.test(conn)) {
+      throw new Error('Invalid SSH connection string');
+    }
+  }
+
+  private validateWxrPath(wxrPath: string): void {
+    if (!/^[a-zA-Z0-9/._-]+$/.test(wxrPath)) {
+      throw new Error('Invalid WXR path: contains unsafe characters');
+    }
+  }
+
+  private execSsh(sshConnection: string, command: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('ssh', [sshConnection, command], {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      let stderr = '';
+      child.stderr.on('data', (data) => { stderr += data; });
+      child.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`SSH command failed: ${stderr}`));
+      });
+    });
+  }
+
   /**
    * Install WordPress content via WP-CLI over SSH
    */
   async installViaWpCli(wxrPath: string, sshConnection: string): Promise<void> {
     logger.info('Installing via WP-CLI', { sshConnection, wxrPath });
 
+    this.validateSshConnection(sshConnection);
+    this.validateWxrPath(wxrPath);
+
     try {
-      // Import WXR file
-      await execAsync(`ssh ${sshConnection} "wp import ${wxrPath} --authors=create"`);
-
-      // Regenerate thumbnails
-      await execAsync(`ssh ${sshConnection} "wp media regenerate --yes"`);
-
+      await this.execSsh(sshConnection, `wp import ${wxrPath} --authors=create`);
+      await this.execSsh(sshConnection, 'wp media regenerate --yes');
       logger.info('WP-CLI installation complete');
     } catch (error) {
       logger.error('WP-CLI installation failed', error);

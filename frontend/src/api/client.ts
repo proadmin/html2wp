@@ -1,8 +1,10 @@
 const API_BASE = '/api';
 
+export type OutputFormat = 'wxr' | 'direct' | 'package';
+
 export interface ConvertRequest {
   input: { type: 'zip' | 'url' | 'local'; source: string };
-  options: { outputFormat: string[]; styleMode: 'faithful' | 'native'; previewEnabled: boolean };
+  options: { outputFormat: OutputFormat[]; styleMode: 'faithful' | 'native'; previewEnabled: boolean };
 }
 
 export interface JobStatus {
@@ -32,4 +34,35 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
     throw new Error('Failed to fetch job status');
   }
   return response.json();
+}
+
+export interface JobPreview {
+  pages: Array<{ id: string; title: string; slug: string }>;
+  posts: Array<{ id: string; title: string; slug: string }>;
+  menus: Array<{ name: string; items: Array<{ label: string; url: string }> }>;
+  assets: Array<{ id: string; path: string; type: string }>;
+}
+
+export async function getJobPreview(jobId: string): Promise<JobPreview> {
+  const response = await fetch(`${API_BASE}/job/${jobId}/preview`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch preview');
+  }
+  return response.json();
+}
+
+export async function downloadWxr(jobId: string, filename: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/job/${jobId}/result/wordpress.xml`);
+  if (!response.ok) {
+    throw new Error('Download failed');
+  }
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
 }

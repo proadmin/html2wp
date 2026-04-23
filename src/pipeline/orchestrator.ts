@@ -10,6 +10,17 @@ import { OllamaClient } from '../ai/ollama.client.js';
 import { logger } from '../utils/logger.js';
 import type { JobState, JobInput, JobOptions } from '../types/index.js';
 
+const PIPELINE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    )
+  ]);
+}
+
 export class PipelineOrchestrator extends EventEmitter {
   private ingestService: IngestService;
   private analyzeService: AnalyzeService;
@@ -46,7 +57,7 @@ export class PipelineOrchestrator extends EventEmitter {
       state.progress = { currentStep: 'ingesting', percent: 10, message: 'Ingesting source files' };
       this.emit('update', state);
 
-      const manifest = await this.ingestService.ingest(input, outputDir);
+      const manifest = await withTimeout(this.ingestService.ingest(input, outputDir), PIPELINE_TIMEOUT_MS, 'Ingest');
       state.results.assetCount = manifest.files.length;
 
       // Step 2: Analyze
@@ -54,26 +65,30 @@ export class PipelineOrchestrator extends EventEmitter {
       state.progress = { currentStep: 'analyzing', percent: 30, message: 'Analyzing site structure' };
       this.emit('update', state);
 
-      const siteMap = await this.analyzeService.analyze(manifest);
+      const siteMap = await withTimeout(this.analyzeService.analyze(manifest), PIPELINE_TIMEOUT_MS, 'Analyze');
       state.results.pageCount = siteMap.pages.length;
       state.results.postCount = siteMap.posts.length;
+      state.results.pages = siteMap.pages.map(p => ({ id: p.id, title: p.title, slug: p.slug }));
+      state.results.posts = siteMap.posts.map(p => ({ id: p.id, title: p.title, slug: p.slug }));
+      state.results.assets = manifest.files.map(f => ({ id: f, path: f, type: 'file' }));
+      state.results.menus = [];
 
       // Step 3: Transform
       state.status = 'transforming';
       state.progress = { currentStep: 'transforming', percent: 60, message: 'Converting to WordPress format' };
       this.emit('update', state);
 
-      const transformedSiteMap = await this.transformService.transform(siteMap);
+      const transformedSiteMap = await withTimeout(this.transformService.transform(siteMap), PIPELINE_TIMEOUT_MS, 'Transform');
 
       // Step 4: Build Theme
       state.status = 'building';
       state.progress = { currentStep: 'building', percent: 70, message: 'Generating WordPress theme' };
       this.emit('update', state);
 
-      await this.themeService.generate(outputDir, transformedSiteMap, {
+      await withTimeout(this.themeService.generate(outputDir, transformedSiteMap, {
         styleMode: options.styleMode,
         siteName: 'HTML2WP Site'
-      });
+      }), PIPELINE_TIMEOUT_MS, 'Theme generation');
 
       // Step 5: Export
       state.status = 'exporting';
@@ -101,7 +116,7 @@ export class PipelineOrchestrator extends EventEmitter {
           method: options.wordpressConfig.installMethod || 'rest-api'
         });
 
-        await installer.install(transformedSiteMap, outputDir);
+        await withTimeout(installer.install(transformedSiteMap, outputDir), PIPELINE_TIMEOUT_MS, 'WordPress install');
       }
 
       state.status = 'complete';

@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { createJob } from './api/client';
+import { createJob, type OutputFormat } from './api/client';
 import { useJobStatus } from './hooks/useJobStatus';
 import { Upload } from './components/Upload';
 import { Configure } from './components/Configure';
 import { Result } from './components/Result';
+import { Preview } from './components/Preview';
 import './App.css';
 
 function App() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [inputType, setInputType] = useState<'zip' | 'url' | 'local'>('url');
   const [source, setSource] = useState('');
-  const [outputFormat, setOutputFormat] = useState<string[]>(['wxr']);
+  const [outputFormat, setOutputFormat] = useState<OutputFormat[]>(['wxr']);
   const [styleMode, setStyleMode] = useState<'faithful' | 'native'>('native');
   const [previewEnabled, setPreviewEnabled] = useState(false);
   const [started, setStarted] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const { status, error, loading } = useJobStatus(jobId);
 
@@ -72,7 +74,22 @@ function App() {
         ) : (
           <div className="conversion-progress">
             {status?.status === 'complete' ? (
-              <Result status={status} />
+              showPreview ? (
+                <Preview
+                  pages={status.results.pages || []}
+                  menus={status.results.menus || []}
+                  assets={status.results.assets || []}
+                  onExport={() => setShowPreview(false)}
+                  onBack={() => setShowPreview(false)}
+                />
+              ) : jobId ? (
+                <Result
+                  jobId={jobId}
+                  status={status}
+                  previewEnabled={previewEnabled}
+                  onViewPreview={() => setShowPreview(true)}
+                />
+              ) : null
             ) : status?.status === 'error' ? (
               <div className="error-state">
                 <h2>Error</h2>

@@ -269,3 +269,52 @@ body {
 .preview-card li {
   margin-bottom: 4px;
 }
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.preview-actions .btn-secondary {
+  background: var(--text-light);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.preview-actions .btn-secondary:hover {
+  opacity: 0.8;
+}
+
+.preview-actions .btn-primary {
+  width: auto;
+  padding: 12px 24px;
+}
+
+.preview-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-light);
+}
+
+.preview-empty p {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.preview-section {
+  background: var(--card-bg);
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-section h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}

@@ -39,6 +39,10 @@ export interface JobResults {
   postCount: number;
   assetCount: number;
   outputUrls: string[];
+  pages?: Array<{ id: string; title: string; slug: string }>;
+  posts?: Array<{ id: string; title: string; slug: string }>;
+  menus?: Array<{ name: string; items: Array<{ label: string; url: string }> }>;
+  assets?: Array<{ id: string; path: string; type: string }>;
 }
 
 export interface JobError {

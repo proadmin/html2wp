@@ -34,6 +34,10 @@ export class WpInstaller {
     });
 
     const wxrPath = `${outputDir}/export/wordpress.xml`;
+    const { existsSync } = await import('fs');
+    if (!existsSync(wxrPath)) {
+      throw new Error(`WXR file not found at ${wxrPath}. Ensure WXR export is enabled.`);
+    }
     await client.installViaWpCli(wxrPath, this.options.sshConnection!);
   }
 

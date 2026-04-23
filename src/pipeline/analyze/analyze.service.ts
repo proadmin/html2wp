@@ -21,7 +21,7 @@ export class AnalyzeService {
     const menus: Menu[] = [];
     const assets: Asset[] = [];
 
-    const htmlFiles = manifest.files.filter((f: { path: string; type: string; size: number }) => f.type === 'html');
+    const htmlFiles = manifest.files.filter((f) => f.type === 'html');
 
     for (const file of htmlFiles) {
       const content = await readFile(join(manifest.extractDir, file.path), 'utf-8');
@@ -30,13 +30,26 @@ export class AnalyzeService {
       try {
         const result = await this.pageDetector.analyzePage(content, url);
 
-        pages.push({
-          id: file.path,
-          title: result.page.title || file.path,
-          slug: result.page.slug || file.path.replace('.html', ''),
-          content: result.page.content || content,
-          parent: undefined
-        });
+        const isPost = /blog|post|article|news/i.test(file.path);
+        if (isPost) {
+          posts.push({
+            id: file.path,
+            title: result.page.title || file.path,
+            slug: result.page.slug || file.path.replace('.html', ''),
+            content: result.page.content || content,
+            date: new Date().toISOString(),
+            categories: [],
+            tags: []
+          });
+        } else {
+          pages.push({
+            id: file.path,
+            title: result.page.title || file.path,
+            slug: result.page.slug || file.path.replace('.html', ''),
+            content: result.page.content || content,
+            parent: undefined
+          });
+        }
 
         menus.push(...result.menus);
         assets.push(...result.assets);
@@ -45,7 +58,7 @@ export class AnalyzeService {
       }
     }
 
-    logger.info(`Analysis complete: ${pages.length} pages, ${menus.length} menus, ${assets.length} assets`);
+    logger.info(`Analysis complete: ${pages.length} pages, ${posts.length} posts, ${menus.length} menus, ${assets.length} assets`);
 
     return { pages, posts, menus, assets };
   }

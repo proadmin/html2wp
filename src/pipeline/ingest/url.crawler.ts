@@ -91,10 +91,14 @@ export class UrlCrawler {
 
       // Extract and download assets
       const assets = await page.evaluate(() => {
+        const getAttr = (sel: string, attr: string) =>
+          Array.from(document.querySelectorAll(sel))
+            .map(el => el.getAttribute(attr))
+            .filter((v): v is string => v !== null);
         return {
-          images: Array.from(document.querySelectorAll('img[src]')).map(el => el.getAttribute('src')) as string[],
-          stylesheets: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(el => el.getAttribute('href')) as string[],
-          scripts: Array.from(document.querySelectorAll('script[src]')).map(el => el.getAttribute('src')) as string[]
+          images: getAttr('img[src]', 'src'),
+          stylesheets: getAttr('link[rel="stylesheet"]', 'href'),
+          scripts: getAttr('script[src]', 'src')
         };
       });
 
@@ -148,14 +152,15 @@ export class UrlCrawler {
           const response = await page.request.get(absoluteUrl);
           const body = await response.body();
           const urlPath = new URL(absoluteUrl).pathname;
-          const filename = urlPath.split('/').pop() || 'asset';
-          const filePath = join(outputDir, 'assets', filename);
+          const relativeAssetPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+          const filename = relativeAssetPath.split('/').pop() || 'asset';
+          const filePath = join(outputDir, 'assets', relativeAssetPath);
 
-          mkdirSync(join(outputDir, 'assets'), { recursive: true });
+          mkdirSync(join(outputDir, 'assets', ...relativeAssetPath.split('/').slice(0, -1)), { recursive: true });
           writeFileSync(filePath, body);
 
           this.downloadedFiles.push({
-            path: join('assets', filename),
+            path: join('assets', relativeAssetPath),
             type: this.getAssetType(filename),
             size: body.length
           });

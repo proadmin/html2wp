@@ -13,15 +13,14 @@
   },
   "dependencies": {
     "archiver": "^7.0.0",
-    "bull": "^4.12.0",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
     "express": "^4.18.2",
     "fast-xml-parser": "^4.3.5",
     "multer": "^1.4.5-lts.1",
     "playwright": "^1.42.0",
-    "unzip-stream": "^0.3.1",
-    "uuid": "^9.0.0"
+    "unzip-stream": "^0.3.1"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.2",
@@ -30,10 +29,9 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.0",
     "@types/unzip-stream": "^0.3.4",
-    "@types/uuid": "^9.0.7",
     "eslint": "^8.56.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.6.1"
+    "vitest": "^4.1.5"
   }
 }

@@ -1,6 +1,8 @@
+import type { OutputFormat } from '../api/client';
+
 interface ConfigureProps {
-  outputFormat: string[];
-  setOutputFormat: (formats: string[]) => void;
+  outputFormat: OutputFormat[];
+  setOutputFormat: (formats: OutputFormat[]) => void;
   styleMode: 'faithful' | 'native';
   setStyleMode: (mode: 'faithful' | 'native') => void;
   previewEnabled: boolean;
@@ -15,7 +17,7 @@ export function Configure({
   previewEnabled,
   setPreviewEnabled
 }: ConfigureProps) {
-  const toggleFormat = (format: string) => {
+  const toggleFormat = (format: OutputFormat) => {
     if (outputFormat.includes(format)) {
       setOutputFormat(outputFormat.filter((f) => f !== format));
     } else {
