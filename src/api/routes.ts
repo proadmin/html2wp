@@ -3,16 +3,27 @@ import { logger } from '../utils/logger.js';
 import { PipelineOrchestrator } from '../pipeline/orchestrator.js';
 import { writeFile, mkdir } from 'fs/promises';
 import { join, basename, resolve, relative } from 'path';
+import crypto from 'crypto';
 import type { JobState, JobInput, JobOptions } from '../types/index.js';
 
-function isValidUrl(url: string): boolean {
+async function isValidUrl(url: string): Promise<boolean> {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
     const hostname = parsed.hostname.toLowerCase();
     if (hostname === 'localhost' || hostname.endsWith('.localhost')) return false;
     if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname)) return false;
     if (hostname === '0.0.0.0' || hostname === '::1') return false;
+
+    // Resolve hostname and check resolved IPs to prevent SSRF via DNS rebinding
+    const { lookup } = await import('dns/promises');
+    const addresses = await lookup(hostname, { all: true });
+    for (const addr of addresses) {
+      const ip = addr.address;
+      if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(ip)) return false;
+      if (ip === '0.0.0.0' || ip === '::1') return false;
+    }
     return true;
   } catch {
     return false;
@@ -28,6 +39,14 @@ const RATE_LIMIT_MAX = 5; // 5 requests per minute
 
 function checkRateLimit(identifier: string): boolean {
   const now = Date.now();
+
+  // Evict expired entries to prevent unbounded memory growth
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) {
+      rateLimitMap.delete(key);
+    }
+  }
+
   const entry = rateLimitMap.get(identifier);
   if (!entry || now > entry.resetAt) {
     rateLimitMap.set(identifier, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
@@ -38,13 +57,13 @@ function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
-const MAX_SOURCE_SIZE_MB = parseInt(process.env.MAX_SOURCE_SIZE_MB || '500', 10);
+export const MAX_SOURCE_SIZE_MB = parseInt(process.env.MAX_SOURCE_SIZE_MB || '500', 10);
 
-function validateSource(input: JobInput): string | null {
+async function validateSource(input: JobInput): Promise<string | null> {
   if (!input.source || typeof input.source !== 'string') return 'Missing or invalid source';
 
   if (input.type === 'url') {
-    if (!isValidUrl(input.source)) return 'Invalid or restricted URL';
+    if (!await isValidUrl(input.source)) return 'Invalid or restricted URL';
     return null;
   }
 
@@ -105,7 +124,7 @@ router.post('/convert', async (req: Request, res: Response) => {
 
     const { input, options } = req.body as { input: JobInput; options: JobOptions };
 
-    const sourceError = validateSource(input);
+    const sourceError = await validateSource(input);
     if (sourceError) {
       return res.status(400).json({ error: sourceError });
     }

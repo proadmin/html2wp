@@ -25,16 +25,27 @@ export class WordPressClient {
     }
   }
 
-  private execSsh(sshConnection: string, command: string): Promise<void> {
+  private execSsh(sshConnection: string, command: string, timeoutMs = 60000): Promise<void> {
     return new Promise((resolve, reject) => {
       const child = spawn('ssh', [sshConnection, command], {
         stdio: ['ignore', 'pipe', 'pipe']
       });
+
+      const timeout = setTimeout(() => {
+        child.kill('SIGTERM');
+        reject(new Error(`SSH command timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
       let stderr = '';
       child.stderr.on('data', (data) => { stderr += data; });
       child.on('close', (code) => {
+        clearTimeout(timeout);
         if (code === 0) resolve();
         else reject(new Error(`SSH command failed: ${stderr}`));
+      });
+      child.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
       });
     });
   }

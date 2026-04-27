@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import { timingSafeEqual } from 'node:crypto';
 import { logger } from '../utils/logger.js';
-import { router } from './routes.js';
+import { router, MAX_SOURCE_SIZE_MB } from './routes.js';
 import { OllamaClient } from '../ai/ollama.client.js';
 
 const app = express();
@@ -13,7 +14,7 @@ const API_KEY = process.env.API_KEY;
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({ origin: corsOrigin }));
 
-app.use(express.json());
+app.use(express.json({ limit: `${MAX_SOURCE_SIZE_MB}mb` }));
 
 // Request logging middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -26,7 +27,16 @@ if (API_KEY) {
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path === '/health') return next();
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.slice(7) !== API_KEY) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const providedKey = authHeader.slice(7);
+    if (providedKey.length !== API_KEY.length) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const providedBuf = Buffer.from(providedKey);
+    const apiKeyBuf = Buffer.from(API_KEY);
+    if (!timingSafeEqual(providedBuf, apiKeyBuf)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     next();
@@ -48,6 +58,9 @@ app.get('/health', async (_req, res) => {
 // Express error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error('Unhandled error', err);
+  if (res.headersSent) {
+    return;
+  }
   res.status(500).json({ error: 'Internal server error' });
 });
 
