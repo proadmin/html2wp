@@ -240,7 +240,7 @@ router.post('/job/:jobId/export', async (req: Request, res: Response) => {
             categories: [],
             tags: []
           })),
-          menus: (job.results.menus || []),
+          menus: (job.results.menus || []).map(m => ({ ...m, location: 'primary' })),
           assets: (job.results.assets || []).map(a => ({
             id: a.id,
             path: a.path,

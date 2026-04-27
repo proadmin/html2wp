@@ -70,7 +70,13 @@ export class PipelineOrchestrator extends EventEmitter {
       state.results.postCount = siteMap.posts.length;
       state.results.pages = siteMap.pages.map(p => ({ id: p.id, title: p.title, slug: p.slug }));
       state.results.posts = siteMap.posts.map(p => ({ id: p.id, title: p.title, slug: p.slug }));
-      state.results.assets = manifest.files.map(f => ({ id: f, path: f, type: 'file' }));
+      state.results.assets = manifest.files.map(f => ({
+        id: f.path,
+        path: f.path,
+        type: f.type === 'html' ? 'other' : f.type,
+        size: f.size,
+        dependencies: []
+      }));
       state.results.menus = [];
 
       // Step 3: Transform
