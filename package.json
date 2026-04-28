@@ -1,6 +1,6 @@
 {
   "name": "html2wp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Convert HTML websites to WordPress format",
   "type": "module",
   "scripts": {

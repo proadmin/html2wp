@@ -150,6 +150,22 @@ HTML2WP/
 - URL crawling may fail on sites with PDF downloads or complex JavaScript
 - Direct WordPress installation requires REST API credentials or SSH access
 
+## Changelog
+
+### 1.0.0 (2026-04-28)
+
+First stable release.
+
+- **Security**: Rate limiting, SSRF protection, path traversal prevention, timing-safe API key comparison, Bearer token authentication
+- **API**: Express server with health checks, graceful shutdown, request logging, job TTL cleanup
+- **Pipeline**: Full conversion pipeline — ingest → analyze → transform → theme → export
+- **AI**: Ollama integration for site analysis and HTML-to-Gutenberg transformation
+- **Frontend**: React UI for creating and monitoring conversion jobs
+- **Export**: WXR generation, WordPress REST API installation, WP-CLI over SSH
+- **Input**: ZIP upload, URL crawling (Playwright), and local directory scanning
+- **Documentation**: Comprehensive installation/admin manual and user manual
+- **Tests**: Unit and integration test coverage
+
 ## License
 
 MIT
